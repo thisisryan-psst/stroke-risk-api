@@ -1,0 +1,17 @@
+.git
+__pycache__
+*.pyc
+.env
+indexclaude.html
+indexfigma.html
+indexfigma_2.html
+indexfigma_3.html
+indexfigma_4.html
+index_old.html
+stroke-risk-assessment.html
+requirements_old.txt
+venv
+env
+node_modules
+*.pkl
+!stroke_prediction_model.pkl
