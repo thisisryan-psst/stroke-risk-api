@@ -1,134 +1,673 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Stroke Risk Assessment</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      padding: 30px;
-    }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-    }
-    .bot { color: #1f2937; margin: 10px 0; }
-    .user { color: #2563eb; margin: 10px 0; }
-    input, button {
-      padding: 10px;
-      width: 100%;
-      margin-top: 10px;
-    }
-    button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    .reset-btn {
-      background: #dc2626;
-    }
-    pre {
-      background: #111827;
-      color: #e5e7eb;
-      padding: 10px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Stroke Risk Assessment</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --bg-light: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-main: #2D3748;
+            --text-muted: #718096;
+            --border-color: #E2E8F0;
+            --input-bg: #FFFFFF;
+            --bot-msg-bg: #EDF2F7;
+            --success: #48BB78;
+            --warning: #ED8936;
+            --danger: #F56565;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        [data-theme="dark"] {
+            --bg-light: #0F172A;
+            --card-bg: #1E293B;
+            --text-main: #F1F5F9;
+            --text-muted: #94A3B8;
+            --border-color: #334155;
+            --input-bg: #0F172A;
+            --bot-msg-bg: #334155;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background: var(--card-bg);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary);
+        }
+
+        .theme-toggle {
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            background: var(--border-color);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            flex: 1;
+            width: 100%;
+        }
+
+        .welcome-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        .assessment-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-history {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: 90%;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            text-align: right;
+        }
+
+        .message-content {
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .bot .message-content {
+            background: var(--bot-msg-bg);
+            color: var(--text-main);
+            border-bottom-left-radius: 2px;
+        }
+
+        .user .message-content {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .input-wrapper {
+            margin-top: auto;
+            display: flex;
+            gap: 0.75rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        input {
+            flex: 1;
+            padding: 0.875rem 1.25rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            padding: 0.875rem 1.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #357ABD;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border-left: 6px solid var(--primary);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-score {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .badge-clear {
+            background: #C6F6D5;
+            color: #22543D;
+        }
+
+        .badge-warning {
+            background: #FEEBC8;
+            color: #744210;
+        }
+
+        .badge-danger {
+            background: #FED7D7;
+            color: #822727;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin: 1.5rem 0;
+        }
+
+        .medical-note {
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                margin: 1rem auto;
+            }
+
+            .welcome-card,
+            .assessment-card {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .highlight-risk {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .highlight-safe {
+            color: var(--success);
+            font-weight: 700;
+        }
+    </style>
 </head>
+
 <body>
 
-<div class="container">
-  <h2>🧠 Stroke Risk Assessment</h2>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <span>⚕️</span> Stroke Care AI
+        </div>
+        <button class="theme-toggle" id="theme-toggle" title="Toggle Dark/Light Mode">
+            🌙
+        </button>
+    </nav>
 
-  <div id="chat"></div>
+    <div class="container">
+        <!-- Welcome/Intro -->
+        <div id="intro" class="welcome-card">
+            <h1>Stroke Risk Assessment</h1>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">
+                Professional health analysis platform. This assessment takes approximately 2 minutes.
+                All data is analyzed securely using clinical-grade AI.
+            </p>
+            <button class="btn-primary" onclick="startAssessment()">Start Assessment</button>
+        </div>
 
-  <input id="reply" placeholder="Type your answer..." />
-  <button onclick="sendReply()">Send</button>
-  <button class="reset-btn" onclick="resetChat()">Reset</button>
+        <!-- Main Interaction Area -->
+        <div id="assessment-container" class="assessment-card hidden">
+            <div id="chat-history" class="chat-history">
+                <!-- Messages appear here -->
+            </div>
 
-  <div id="results"></div>
-</div>
+            <div id="interaction-controls" class="input-wrapper">
+                <input id="user-input" type="text" placeholder="Your medical information..."
+                    onkeypress="if(event.key==='Enter') sendInput()">
+                <button class="btn-primary" onclick="sendInput()">Next Step</button>
+            </div>
+        </div>
 
-<script>
-const API = "http://127.0.0.1:8000";
+        <!-- Results Area -->
+        <div id="results" class="hidden">
+            <div class="result-card" id="main-result-card">
+                <div class="result-header">
+                    <div>
+                        <h2 style="font-size: 1.1rem; color: var(--text-muted);">Assessment Result</h2>
+                        <div id="risk-label" class="badge">Processing...</div>
+                    </div>
+                    <div class="result-score" id="risk-score">0%</div>
+                </div>
 
-async function getQuestion() {
-  const res = await fetch(`${API}/chat/question`);
-  const data = await res.json();
+                <div class="results-grid">
+                    <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 12px;">
+                        <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Clinical Guidance</h3>
+                        <div id="medical-explanation" style="font-size: 0.95rem;"></div>
+                    </div>
 
-  const msg = data.message || data.question;
+                    <div style="text-align: center;">
+                        <h3 style="font-size: 1rem; margin-bottom: 1rem;">Risk Distribution Analysis</h3>
+                        <div class="chart-container">
+                            <canvas id="riskChart"></canvas>
+                        </div>
+                    </div>
+                </div>
 
-  if (!msg || msg === "All questions completed") {
-    showResults();
-    return;
-  }
+                <div class="medical-note">
+                    <strong>Medical Disclaimer:</strong> This assessment is for educational purposes only. It is not a
+                    substitute for professional medical advice, diagnosis, or treatment.
+                </div>
 
-  document.getElementById("chat").innerHTML +=
-    `<div class="bot">🤖 ${msg}</div>`;
-}
+                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button class="btn-secondary" onclick="resetAssessment()">New Assessment</button>
+                    <button class="btn-primary" style="background: #2D3748; color: white;"
+                        onclick="downloadReport()">Download Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-async function sendReply() {
-  const input = document.getElementById("reply");
-  const text = input.value.trim();
-  if (!text) return;
+    <script>
+        const API = window.location.origin; // Set to current domain for production
+        let currentProbability = 0;
+        let riskChart = null;
 
-  document.getElementById("chat").innerHTML +=
-    `<div class="user">🧑 ${text}</div>`;
+        // Theme Toggle Logic
+        const themeToggle = document.getElementById('theme-toggle');
+        const setBodyTheme = (theme) => {
+            document.documentElement.setAttribute('data-theme', theme);
+            themeToggle.innerText = theme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('theme', theme);
+        };
 
-  input.value = "";
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        setBodyTheme(savedTheme);
 
-  await fetch(`${API}/chat/reply`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ reply: text })
-  });
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            setBodyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            if (riskChart) initChart(currentProbability); // Redraw chart for theme
+        });
 
-  getQuestion();
-}
+        async function startAssessment() {
+            document.getElementById('intro').classList.add('hidden');
+            document.getElementById('assessment-container').classList.remove('hidden');
+            await resetBackend();
+            await getNextQuestion();
+        }
 
-async function showResults() {
-  const features = await fetch(`${API}/chat/extract`).then(r => r.json());
+        async function resetBackend() {
+            await fetch(`${API}/chat/reset`, { method: "POST" });
+        }
 
-  const pred = await fetch(`${API}/predict`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(features)
-  }).then(r => r.json());
+        async function getNextQuestion() {
+            const res = await fetch(`${API}/chat/question`);
+            const data = await res.json();
+            const msg = data.message || data.question;
 
-  const explain = await fetch(`${API}/explain`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(features)
-  }).then(r => r.json());
+            if (!msg || msg === "All questions completed") {
+                await processFinalResults();
+                return;
+            }
 
-  document.getElementById("results").innerHTML = `
-    <h3>📊 Result</h3>
-    <p><b>Stroke Risk:</b> ${(pred.stroke_probability * 100).toFixed(2)}%</p>
-    <p><b>Risk Level:</b> ${pred.risk_label}</p>
-    <h3>🩺 Explanation</h3>
-    <pre>${explain.explanation}</pre>
-  `;
-}
+            addMessage(msg, 'bot');
+        }
 
-async function resetChat() {
-  await fetch(`${API}/chat/reset`, { method: "POST" });
+        async function sendInput() {
+            const inputEl = document.getElementById('user-input');
+            const text = inputEl.value.trim();
+            if (!text) return;
 
-  document.getElementById("chat").innerHTML = "";
-  document.getElementById("results").innerHTML = "";
-  document.getElementById("reply").value = "";
+            addMessage(text, 'user');
+            inputEl.value = "";
 
-  getQuestion();
-}
+            await fetch(`${API}/chat/reply`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reply: text })
+            });
 
-// start conversation
-getQuestion();
-</script>
+            await getNextQuestion();
+        }
+
+        function addMessage(text, sender) {
+            const history = document.getElementById('chat-history');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            msgDiv.innerHTML = `<div class="message-content">${text}</div>`;
+            history.appendChild(msgDiv);
+
+            // Smooth scroll
+            msgDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function processFinalResults() {
+            document.getElementById('assessment-container').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+
+            const features = await fetch(`${API}/chat/extract`).then(r => r.json());
+
+            const [pred, explain] = await Promise.all([
+                fetch(`${API}/predict`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(features)
+                }).then(r => r.json()),
+                fetch(`${API}/explain`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(features)
+                }).then(r => r.json())
+            ]);
+
+            displayResults(pred, explain);
+        }
+
+        function displayResults(pred, explain) {
+            currentProbability = pred.stroke_probability;
+            const score = (currentProbability * 100).toFixed(1);
+            const label = pred.risk_label;
+
+            document.getElementById('risk-score').innerText = `${score}%`;
+            document.getElementById('risk-label').innerText = label;
+
+            // Apply medical colors
+            const labelEl = document.getElementById('risk-label');
+            const cardEl = document.getElementById('main-result-card');
+            const scoreEl = document.getElementById('risk-score');
+
+            const lowerLabel = (label || "").toLowerCase();
+            const prob = pred.stroke_probability || 0;
+
+            if (lowerLabel.includes('low') || (lowerLabel === "" && prob < 0.15)) {
+                labelEl.className = 'badge badge-clear';
+                cardEl.style.borderLeftColor = '#48BB78';
+                scoreEl.style.color = '#48BB78';
+            } else if (lowerLabel.includes('medium') || (lowerLabel === "" && prob < 0.4)) {
+                labelEl.className = 'badge badge-warning';
+                cardEl.style.borderLeftColor = '#ED8936';
+                scoreEl.style.color = '#ED8936';
+            } else {
+                labelEl.className = 'badge badge-danger';
+                cardEl.style.borderLeftColor = '#F56565';
+                scoreEl.style.color = '#F56565';
+            }
+
+            document.getElementById('medical-explanation').innerHTML = formatMedicalText(explain.explanation)
+                .replace(/\n/g, '<br>');
+
+            initChart(currentProbability);
+        }
+
+        function formatMedicalText(text) {
+            if (!text) return "";
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/high stroke risk/gi, '<span class="highlight-risk">$&</span>')
+                .replace(/high risk/gi, '<span class="highlight-risk">$&</span>')
+                .replace(/low stroke risk/gi, '<span class="highlight-safe">$&</span>')
+                .replace(/low risk/gi, '<span class="highlight-safe">$&</span>');
+        }
+
+        function initChart(probability) {
+            const ctx = document.getElementById('riskChart');
+            if (riskChart) riskChart.destroy();
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const val = probability * 100;
+
+            riskChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Safety Margin', 'Calculated Risk'],
+                    datasets: [{
+                        data: [100 - val, val],
+                        backgroundColor: [isDark ? '#334155' : '#EDF2F7', getRiskColor(val)],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    cutout: '80%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                color: isDark ? '#F1F5F9' : '#2D3748'
+                            }
+                        }
+                    },
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function getRiskColor(val) {
+            if (val < 15) return '#48BB78';
+            if (val < 40) return '#ED8936';
+            return '#F56565';
+        }
+
+        function downloadReport() {
+            const userName = prompt("Please enter the patient's name for the report:", "Valued Patient");
+            if (userName === null) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const score = document.getElementById('risk-score').innerText;
+            const label = document.getElementById('risk-label').innerText;
+            const explanation = document.getElementById('medical-explanation').innerText;
+            const timestamp = new Date().toLocaleString();
+
+            // Header - Professional Medical Style
+            doc.setFillColor(74, 144, 226); // Brand Blue
+            doc.rect(0, 0, 210, 40, 'F');
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text("Stroke Risk Assessment Report", 20, 25);
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Patient: ${userName} | Date: ${timestamp}`, 20, 32);
+
+            // Summary Section
+            doc.setTextColor(45, 55, 72);
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("ASSESSMENT SUMMARY", 20, 55);
+
+            doc.setDrawColor(226, 232, 240);
+            doc.line(20, 58, 190, 58);
+
+            // Patient Info
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text("Patient Name:", 20, 70);
+            doc.setFont("helvetica", "bold");
+            doc.text(userName, 75, 70);
+
+            doc.setFont("helvetica", "normal");
+            doc.text("Risk Category:", 20, 80);
+
+            // Color-coded label
+            const lowerLabel = label.toLowerCase();
+            if (lowerLabel.includes('low')) doc.setTextColor(72, 187, 120);
+            else if (lowerLabel.includes('medium')) doc.setTextColor(237, 137, 54);
+            else doc.setTextColor(245, 101, 101);
+
+            doc.setFont("helvetica", "bold");
+            doc.text(label.toUpperCase(), 75, 80);
+
+            doc.setTextColor(45, 55, 72);
+            doc.setFont("helvetica", "normal");
+            doc.text("Probability Score:", 20, 90);
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text(score, 75, 90);
+
+            // Guidance Section
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(45, 55, 72);
+            doc.text("CLINICAL GUIDANCE & ANALYSIS", 20, 110);
+            doc.line(20, 113, 190, 113);
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(74, 85, 104);
+
+            const splitExplanation = doc.splitTextToSize(explanation, 170);
+            doc.text(splitExplanation, 20, 122);
+
+            // Professional Footer
+            const pageHeight = doc.internal.pageSize.height;
+            doc.setFillColor(248, 250, 252);
+            doc.rect(0, pageHeight - 35, 210, 35, 'F');
+
+            doc.setFontSize(8);
+            doc.setTextColor(113, 128, 150);
+            const disclaimer = "Privacy & Medical Notice: This report is a generated summary of automated health data analysis. It does not constitute a formal diagnosis. All data remains anonymous. Please share this report with your cardiologist or primary care physician for clinical validation and follow-up.";
+            const splitDisclaimer = doc.splitTextToSize(disclaimer, 170);
+            doc.text(splitDisclaimer, 20, pageHeight - 25);
+
+            doc.save(`Stroke_Risk_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        }
+
+        function resetAssessment() {
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('chat-history').innerHTML = "";
+            document.getElementById('intro').classList.remove('hidden');
+        }
+    </script>
 
 </body>
+
 </html>

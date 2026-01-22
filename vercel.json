@@ -2,10 +2,6 @@
     "version": 2,
     "rewrites": [
         {
-            "source": "/api/(.*)",
-            "destination": "/api/index.py"
-        },
-        {
             "source": "/chat/(.*)",
             "destination": "/api/index.py"
         },
@@ -18,8 +14,8 @@
             "destination": "/api/index.py"
         },
         {
-            "source": "/",
-            "destination": "/medical-assessment.html"
+            "source": "/api/(.*)",
+            "destination": "/api/index.py"
         }
     ]
 }

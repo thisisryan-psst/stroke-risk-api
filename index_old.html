@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stroke Risk Assessment</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 30px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    .bot { color: #1f2937; margin: 10px 0; }
+    .user { color: #2563eb; margin: 10px 0; }
+    input, button {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .reset-btn {
+      background: #dc2626;
+    }
+    pre {
+      background: #111827;
+      color: #e5e7eb;
+      padding: 10px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🧠 Stroke Risk Assessment</h2>
+
+  <div id="chat"></div>
+
+  <input id="reply" placeholder="Type your answer..." />
+  <button onclick="sendReply()">Send</button>
+  <button class="reset-btn" onclick="resetChat()">Reset</button>
+
+  <div id="results"></div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+async function getQuestion() {
+  const res = await fetch(`${API}/chat/question`);
+  const data = await res.json();
+
+  const msg = data.message || data.question;
+
+  if (!msg || msg === "All questions completed") {
+    showResults();
+    return;
+  }
+
+  document.getElementById("chat").innerHTML +=
+    `<div class="bot">🤖 ${msg}</div>`;
+}
+
+async function sendReply() {
+  const input = document.getElementById("reply");
+  const text = input.value.trim();
+  if (!text) return;
+
+  document.getElementById("chat").innerHTML +=
+    `<div class="user">🧑 ${text}</div>`;
+
+  input.value = "";
+
+  await fetch(`${API}/chat/reply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reply: text })
+  });
+
+  getQuestion();
+}
+
+async function showResults() {
+  const features = await fetch(`${API}/chat/extract`).then(r => r.json());
+
+  const pred = await fetch(`${API}/predict`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(features)
+  }).then(r => r.json());
+
+  const explain = await fetch(`${API}/explain`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(features)
+  }).then(r => r.json());
+
+  document.getElementById("results").innerHTML = `
+    <h3>📊 Result</h3>
+    <p><b>Stroke Risk:</b> ${(pred.stroke_probability * 100).toFixed(2)}%</p>
+    <p><b>Risk Level:</b> ${pred.risk_label}</p>
+    <h3>🩺 Explanation</h3>
+    <pre>${explain.explanation}</pre>
+  `;
+}
+
+async function resetChat() {
+  await fetch(`${API}/chat/reset`, { method: "POST" });
+
+  document.getElementById("chat").innerHTML = "";
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("reply").value = "";
+
+  getQuestion();
+}
+
+// start conversation
+getQuestion();
+</script>
+
+</body>
+</html>
