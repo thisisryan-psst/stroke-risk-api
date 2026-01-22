@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stroke Risk Assessment</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-dark: #050505;
+      --card-bg: #111111;
+      --card-border: #222222;
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --text-main: #f0f0f0;
+      --text-muted: #a0a0a0;
+      --glass-bg: rgba(17, 17, 17, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.1);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #444;
+    }
+
+    .header {
+      padding: 1.5rem 2rem;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 8px 16px rgba(59, 130, 246, 0.2);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #fff, #888);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.4rem;
+      border-radius: 12px;
+      width: fit-content;
+    }
+
+    .tab {
+      padding: 0.75rem 1.25rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tab:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab.active {
+      background: #fff;
+      color: #000;
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+    }
+
+    .tab-content {
+      display: none;
+      flex: 1;
+      height: calc(100vh - 160px);
+    }
+
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .message {
+      display: flex;
+      gap: 1rem;
+      max-width: 85%;
+      animation: messageSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+    }
+
+    .bot-avatar {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+
+    .user-avatar {
+      background: #333;
+    }
+
+    .message-content {
+      padding: 1.25rem 1.5rem;
+      border-radius: 18px;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .bot .message-content {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-top-left-radius: 4px;
+      color: #e0e0e0;
+    }
+
+    .user .message-content {
+      background: linear-gradient(135deg, var(--accent-blue), #1d4ed8);
+      color: #fff;
+      border-top-right-radius: 4px;
+      box-shadow: 0 10px 20px rgba(59, 130, 246, 0.15);
+    }
+
+    .input-area {
+      padding: 1.5rem 2rem;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--glass-border);
+    }
+
+    .input-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      gap: 1rem;
+    }
+
+    input {
+      flex: 1;
+      padding: 1rem 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s;
+    }
+
+    input:focus {
+      border-color: var(--accent-blue);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    button {
+      padding: 0 1.75rem;
+      background: var(--accent-blue);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+      filter: brightness(1.1);
+    }
+
+    .reset-btn {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+    }
+
+    .reset-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .results {
+      width: 100%;
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .result-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 1.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 4px;
+    }
+
+    .prediction-card::before {
+      background: var(--accent-blue);
+    }
+
+    .explanation-card::before {
+      background: var(--accent-purple);
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #fff;
+    }
+
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .result-item:last-child {
+      border-bottom: none;
+    }
+
+    .result-label {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .result-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--accent-blue);
+    }
+
+    .risk-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .risk-low {
+      background: rgba(34, 197, 94, 0.1);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+
+    .risk-medium {
+      background: rgba(234, 179, 8, 0.1);
+      color: #facc15;
+      border: 1px solid rgba(234, 179, 8, 0.2);
+    }
+
+    .risk-high {
+      background: rgba(255, 75, 75, 0.15);
+      color: #ff4b4b;
+      border: 1px solid rgba(255, 75, 75, 0.4);
+      box-shadow: 0 0 15px rgba(255, 75, 75, 0.1);
+    }
+
+    .explanation {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: #d1d1d1;
+    }
+
+    .analytics-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 3rem 2rem;
+    }
+
+    .analytics-content {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      text-align: center;
+      background: var(--card-bg);
+      border-radius: 24px;
+      border: 1px dashed var(--card-border);
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 1.5rem;
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-text {
+      color: var(--text-muted);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2rem;
+      transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--glass-border);
+      transform: translateY(-8px);
+    }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .stat-icon-blue {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--accent-blue);
+    }
+
+    .stat-icon-purple {
+      background: rgba(139, 92, 246, 0.1);
+      color: var(--accent-purple);
+    }
+
+    .stat-icon-green {
+      background: rgba(34, 197, 94, 0.1);
+      color: #4ade80;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .stat-value-blue {
+      color: var(--accent-blue);
+    }
+
+    .stat-value-purple {
+      color: var(--accent-purple);
+    }
+
+    .stat-value-green {
+      color: #4ade80;
+    }
+
+    .stat-value-yellow {
+      color: #facc15;
+    }
+
+    .stat-value-red {
+      color: #ff4b4b;
+      text-shadow: 0 0 20px rgba(255, 75, 75, 0.2);
+    }
+
+    .analytics-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: #fff;
+    }
+
+    .section-description {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 2.5rem;
+      line-height: 1.6;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 350px;
+    }
+
+    .info-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .info-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .info-card-icon {
+      font-size: 32px;
+    }
+
+    .info-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .info-card-text {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .alert-box {
+      background: rgba(59, 130, 246, 0.05);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      border-radius: 20px;
+      padding: 2rem;
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .alert-icon {
+      font-size: 24px;
+      color: var(--accent-blue);
+    }
+
+    .alert-content h4 {
+      color: #fff;
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .alert-content p {
+      color: var(--text-muted);
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 1rem;
+      }
+
+      .chat-container {
+        padding: 1rem;
+      }
+
+      .message {
+        max-width: 95%;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .analytics-section {
+        padding: 1.5rem;
+      }
+    }
+
+    .highlight-risk {
+      color: #ff4b4b;
+      font-weight: 700;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(255, 75, 75, 0.2);
+    }
+
+    .highlight-safe {
+      color: #4ade80;
+      font-weight: 700;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(74, 222, 128, 0.2);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    <div class="header-top">
+      <div class="header-title">
+        <div class="header-icon">🧠</div>
+        <h1>Stroke Risk Assessment</h1>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('interaction')">
+        <span class="tab-icon">💬</span>
+        User Interaction
+      </button>
+      <button class="tab" onclick="switchTab('analytics')">
+        <span class="tab-icon">📈</span>
+        Health Analytics
+      </button>
+    </div>
+  </div>
+
+  <!-- User Interaction Tab -->
+  <div id="interaction-tab" class="tab-content active">
+    <div class="chat-container" id="chat"></div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <input id="reply" placeholder="Type your answer..." onkeypress="handleKeyPress(event)" />
+        <button onclick="sendReply()">Send</button>
+        <button class="reset-btn" onclick="resetChat()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Tab -->
+  <div id="analytics-tab" class="tab-content">
+    <div class="analytics-container">
+      <div class="analytics-content" id="analytics-content">
+        <div class="empty-state">
+          <div class="empty-icon">🧠</div>
+          <div class="empty-title">No Data Available</div>
+          <div class="empty-text">Complete the assessment to view analytics</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+    let analyticsData = null;
+    let featureChart = null;
+    let riskChart = null;
+
+    // Tab Switching
+    function switchTab(tabName) {
+      // Update tab buttons
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(tab => tab.classList.remove('active'));
+      event.target.closest('.tab').classList.add('active');
+
+      // Update tab content
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabContents.forEach(content => content.classList.remove('active'));
+      document.getElementById(tabName + '-tab').classList.add('active');
+    }
+
+    // Chat Functions
+    async function getQuestion() {
+      const res = await fetch(`${API}/chat/question`);
+      const data = await res.json();
+
+      const msg = data.message || data.question;
+
+      if (!msg || msg === "All questions completed") {
+        showResults();
+        return;
+      }
+
+      const chatDiv = document.getElementById("chat");
+      chatDiv.innerHTML += `
+    <div class="message bot">
+      <div class="message-avatar bot-avatar">🤖</div>
+      <div class="message-content">${formatMessageContent(msg)}</div>
+    </div>
+  `;
+
+      scrollToBottom();
+    }
+
+    async function sendReply() {
+      const input = document.getElementById("reply");
+      const text = input.value.trim();
+      if (!text) return;
+
+      const chatDiv = document.getElementById("chat");
+      chatDiv.innerHTML += `
+    <div class="message user">
+      <div class="message-avatar user-avatar">👤</div>
+      <div class="message-content">${text}</div>
+    </div>
+  `;
+
+      input.value = "";
+      scrollToBottom();
+
+      await fetch(`${API}/chat/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reply: text })
+      });
+
+      getQuestion();
+    }
+
+    async function showResults() {
+      const features = await fetch(`${API}/chat/extract`).then(r => r.json());
+
+      const pred = await fetch(`${API}/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(features)
+      }).then(r => r.json());
+
+      const explain = await fetch(`${API}/explain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(features)
+      }).then(r => r.json());
+
+      // Store analytics data
+      analyticsData = { features, prediction: pred, explanation: explain };
+
+      // Format the explanation
+      const formattedExplanation = formatMessageContent(explain.explanation)
+        .replace(/\n/g, '<br>');
+
+      // Determine risk badge class
+      const label = (pred.risk_label || "").toLowerCase();
+      const prob = pred.stroke_probability || 0;
+
+      let riskClass = 'risk-low';
+      if (label.includes('high') || prob > 0.4) {
+        riskClass = 'risk-high';
+      } else if (label.includes('medium') || prob > 0.1) {
+        riskClass = 'risk-medium';
+      }
+
+      document.getElementById("chat").innerHTML += `
+    <div class="results">
+      <div class="result-card prediction-card">
+        <h3><span class="dot dot-blue"></span>Stroke Risk Assessment Result</h3>
+        <div class="result-item">
+          <span class="result-label">Stroke Risk Probability:</span>
+          <span class="result-value">${(pred.stroke_probability * 100).toFixed(2)}%</span>
+        </div>
+        <div class="result-item">
+          <span class="result-label">Clinical Risk Category:</span>
+          <span class="risk-badge ${riskClass}">${pred.risk_label}</span>
+        </div>
+      </div>
+      
+      <div class="result-card explanation-card">
+        <h3><span class="dot dot-purple"></span>Medical Analysis & Guidance</h3>
+        <div class="explanation">${formattedExplanation}</div>
+      </div>
+    </div>
+  `;
+
+      scrollToBottom();
+      updateAnalytics();
+    }
+
+    async function resetChat() {
+      await fetch(`${API}/chat/reset`, { method: "POST" });
+
+      document.getElementById("chat").innerHTML = "";
+      document.getElementById("reply").value = "";
+      analyticsData = null;
+
+      // Reset analytics
+      document.getElementById("analytics-content").innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">🧠</div>
+      <div class="empty-title">No Data Available</div>
+      <div class="empty-text">Complete the assessment to view analytics</div>
+    </div>
+  `;
+
+      getQuestion();
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendReply();
+      }
+    }
+
+    function scrollToBottom() {
+      const chatContainer = document.getElementById("chat");
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function formatMessageContent(text) {
+      if (!text) return "";
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/high stroke risk/gi, '<span class="highlight-risk">$&</span>')
+        .replace(/high risk/gi, '<span class="highlight-risk">$&</span>')
+        .replace(/low stroke risk/gi, '<span class="highlight-safe">$&</span>')
+        .replace(/low risk/gi, '<span class="highlight-safe">$&</span>');
+    }
+
+    // Analytics Functions
+    function updateAnalytics() {
+      if (!analyticsData) return;
+
+      const { features, prediction, explanation } = analyticsData;
+
+      // Determine risk value class
+      const label = (prediction.risk_label || "").toLowerCase();
+      const prob = prediction.stroke_probability || 0;
+
+      let riskValueClass = 'stat-value-green';
+      if (label.includes('high') || prob > 0.4) {
+        riskValueClass = 'stat-value-red';
+      } else if (label.includes('medium') || prob > 0.1) {
+        riskValueClass = 'stat-value-yellow';
+      }
+
+      const analyticsHTML = `
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon stat-icon-blue">📈</div>
+          <h3 style="margin: 0; font-size: 16px;">Risk Score</h3>
+        </div>
+        <div class="stat-value stat-value-blue">${(prediction.stroke_probability * 100).toFixed(1)}%</div>
+        <div class="stat-label">Predicted stroke probability</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon stat-icon-purple">📊</div>
+          <h3 style="margin: 0; font-size: 16px;">Model Used</h3>
+        </div>
+        <div class="stat-value stat-value-purple">AI Engine</div>
+        <div class="stat-label">XGBoost Classification</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon stat-icon-green">💓</div>
+          <h3 style="margin: 0; font-size: 16px;">Risk Level</h3>
+        </div>
+        <div class="stat-value ${riskValueClass}">${prediction.risk_label}</div>
+        <div class="stat-label">Clinical assessment result</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px;">
+      <!-- Risk Distribution -->
+      <div class="analytics-section">
+        <div class="section-title">
+          <span class="dot" style="background: #22c55e;"></span>
+          Risk Portfolio Analysis
+        </div>
+        <div class="section-description">
+          A visual representation of your health profile relative to binary risk outcomes. This distribution shows the model's confidence in the classification.
+        </div>
+        <div class="chart-container">
+          <canvas id="riskChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Health Insights -->
+    <div class="analytics-section">
+      <div class="section-title">
+        <span class="dot" style="background: #eab308;"></span>
+        Health Insights & Technology
+      </div>
+      <div class="info-cards">
+        <div class="info-card">
+          <div class="info-card-icon">🏥</div>
+          <div class="info-card-title">Early Detection</div>
+          <div class="info-card-text">
+            Identifying risk factors early allows for preventive measures that can significantly reduce the likelihood of a stroke.
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon">⚡</div>
+          <div class="info-card-title">AI Powered</div>
+          <div class="info-card-text">
+            Our assessment uses advanced gradient boosting to cross-reference your data with thousands of clinical cases.
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon">🛡️</div>
+          <div class="info-card-title">Prevention First</div>
+          <div class="info-card-text">
+            Regular monitoring and lifestyle adjustments are the most effective ways to manage cardiovascular health.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Alert -->
+    <div class="alert-box">
+      <div class="alert-icon">⚕️</div>
+      <div class="alert-content">
+        <h4>Medical Disclaimer</h4>
+        <p>
+          This stroke risk assessment is for educational purposes only. It uses mathematical modeling to estimate risk based on provided data and should not be considered a clinical diagnosis. Please consult with a healthcare professional for a comprehensive medical evaluation.
+        </p>
+      </div>
+    </div>
+  `;
+
+      document.getElementById("analytics-content").innerHTML = analyticsHTML;
+
+      // Create charts
+      createRiskChart(prediction.stroke_probability);
+    }
+
+    function createRiskChart(probability) {
+      const ctx = document.getElementById('riskChart');
+      if (!ctx) return;
+
+      if (riskChart) {
+        riskChart.destroy();
+      }
+
+      const riskPercent = probability * 100;
+      const safePercent = 100 - riskPercent;
+
+      let riskColor = '#ff4b4b'; // Default Red
+      let riskBg = 'rgba(255, 75, 75, 0.8)';
+
+      if (riskPercent < 15) {
+        riskColor = '#22c55e'; // Green
+        riskBg = 'rgba(34, 197, 94, 0.8)';
+      } else if (riskPercent < 40) {
+        riskColor = '#eab308'; // Yellow/Orange
+        riskBg = 'rgba(234, 179, 8, 0.8)';
+      }
+
+      riskChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Safety Margin', 'Risk Probability'],
+          datasets: [{
+            data: [safePercent, riskPercent],
+            backgroundColor: [
+              'rgba(59, 130, 246, 0.1)',
+              riskBg,
+            ],
+            borderColor: [
+              'rgba(59, 130, 246, 0.3)',
+              riskColor,
+            ],
+            borderWidth: 2,
+            hoverOffset: 15
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#e5e5e5',
+                padding: 30,
+                usePointStyle: true,
+                font: {
+                  size: 14,
+                  weight: '500'
+                }
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              padding: 16,
+              titleFont: { size: 14, weight: '700' },
+              bodyFont: { size: 14 },
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 1,
+              callbacks: {
+                label: function (context) {
+                  return ' ' + context.label + ': ' + context.parsed.toFixed(1) + '%';
+                }
+              }
+            }
+          },
+          cutout: '75%',
+          animation: {
+            animateScale: true,
+            animateRotate: true
+          }
+        }
+      });
+    }
+
+    // Start conversation
+    getQuestion();
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+venv/
+env/
+.git/
+node_modules/
+# Keep the model file as it is needed for prediction
+# stroke_prediction_model.pkl 
